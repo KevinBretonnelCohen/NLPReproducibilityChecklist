@@ -8,9 +8,9 @@ Source: Google Sheets/R01 Studying the science in NLP/Reproducibility (migrated 
 CHECKLISTS ANALYZED IN THE PAPER:
 
 Natural language processing; 
-Filename: 
-Filename: 
-Filename: 
+Filename: ARR-Responsible-NLP-Research-Checklist-2023-01-19.pdf
+Filename: EACL-2023-CFP-Reproducibility-Criteria.pdf
+Filename: Reproducibility-Checklist-NAACL-HLT 2021.pdf
 
 Machine learning:
 Filename: 
