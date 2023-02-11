@@ -1,0 +1,130 @@
+---
+title: "NLP and ethics in the PubMed-indexed literature"
+author: "KBC"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This markdown document describes an analysis of 22 papers returned by the following search of PubMed:
+
+*("natural language processing" OR "text mining") (ethics OR ethical)*
+
+
+
+```{r read.in.data, echo = FALSE}
+# note that I went through the spreadsheet that I got from PubMed and did the 
+# following:
+# 1) replaced all spaces in column names with periods. E.g. "Create Date" 
+#    becomes "Create.Date"
+# 2) prefixed every column name with an underscore
+# 3) added columns for materials, methods, and topics/issues
+papers <- data.table::fread("/Users/kevincohen/Downloads/PubMed-search-NLP-or-TM-ethics-or-ethical-in-title - PubMed-search-NLP-or-TM-ethics-or-ethical-in-title.tsv",
+                     header = TRUE,
+                     sep = "\t")
+#head(papers)
+
+```
+
+
+```{r normalize.lexical.items, echo = FALSE}
+
+# normalize themes/ethical issues raised
+normalized.multidisciplinarity <- "interdisciplinarity"
+papers$`_themes` <- gsub(pattern = "multidisciplinarity|collaboration|interdisciplinarity", replacement = normalized.multidisciplinarity, x = papers$`_themes`, ignore.case = TRUE)
+papers$`_themes` <- gsub(pattern = "confidentiality", replacement = "privacy", x = papers$`_themes`, ignore.case = TRUE)
+papers$`_themes` <- gsub(pattern = "need|needs|needed", replacement = "NeedMore", x = papers$`_themes`, ignore.case = TRUE)
+
+# normalize materials
+papers$`_materials` <- gsub(pattern = "not specified", replacement = "unspecified", x = papers$`_materials`, ignore.case = TRUE)
+papers$`_materials` <- gsub(pattern = "Web of Science", replacement = "WebOfScience", x = papers$`_materials`, ignore.case = TRUE)
+
+# normalize methods
+papers$`_methods` <- gsub(pattern = "literature review", replacement = "LiteratureReview", x = papers$`_methods`, ignore.case = TRUE)
+papers$`_methods` <- gsub(pattern = "systematic review", replacement = "SystematicReview", x = papers$`_methods`, ignore.case = TRUE)
+papers$`_methods` <- gsub(pattern = "scoping review", replacement = "ScopingReview", x = papers$`_methods`, ignore.case = TRUE)
+papers$`_methods` <- gsub(pattern = "machine learning|ML", replacement = "MachineLearning", x = papers$`_methods`, ignore.case = TRUE)
+
+papers$`_Title` <- gsub(pattern = "artificial intelligence|AI", replacement = "AI", x = papers$`_Title`, ignore.case = TRUE)
+papers$`_Title` <- gsub(pattern = "ethics|ethical", replacement = "ethics", x = papers$`_Title`, ignore.case = TRUE)
+
+```
+
+Steps:
+
+1. Build a little corpus (with function build.corpus())
+2. Get word frequencies for that corpus (with function get.word.frequencies())
+3. Make the word cloud (with function produce.word.cloud())
+```{r build.and.plot.corpus, echo = FALSE}
+library(tm)
+library(wordcloud)
+# never done this before: creating a corpus from a vector of text!
+build.corpus <- function(text.vector) {
+  
+  docs <- Corpus(VectorSource(text.vector))
+library(magrittr)
+  # https://towardsdatascience.com/create-a-word-cloud-with-r-bde3e7422e8a copy-and-paste
+  docs <- docs %>%
+    tm_map(removeNumbers) %>%
+    tm_map(removePunctuation) %>%
+    tm_map(stripWhitespace)
+  docs <- tm_map(docs, content_transformer(tolower))
+  docs <- tm_map(docs, removeWords, stopwords("english"))
+  return(docs)
+} # close function definition build.corpus()
+
+do.the.thing <- function(vector.of.text, minimum.frequency) {
+docs <- build.corpus(vector.of.text) 
+#docs <- build.corpus(papers$`_materials`) # min frequency of 3
+#docs <- build.corpus(papers$`_methods`) # need min frequency of 2
+
+get.word.frequencies <- function(my.corpus) {
+  dtm <- TermDocumentMatrix(docs) 
+  matrix <- as.matrix(dtm) 
+  words <- sort(rowSums(matrix),decreasing=TRUE) 
+  df <- data.frame(word = names(words),freq=words)
+  return(df)
+} # close function definition get.word.frequencies()
+
+word.frequencies <- get.word.frequencies(docs)
+
+#set.seed(1234) # for reproducibility 
+#wordcloud(words = df$word, freq = df$freq, min.freq = 1,           max.words=200, random.order=FALSE, rot.per=0.35,            colors=brewer.pal(8, "Dark2"))
+
+produce.word.cloud <- function(word.frequencies, minimum.frequency) { 
+  set.seed(1789) # for reproducibility 
+  wordcloud(words = word.frequencies$word, freq = word.frequencies$freq, min.freq = minimum.frequency,           
+            max.words=200, random.order=FALSE, rot.per=0.35, colors=brewer.pal(8, "Dark2"))
+} # close function definition produce.word.cloud()
+
+produce.word.cloud(word.frequencies = word.frequencies, minimum.frequency = minimum.frequency)
+
+} # close function definition do.the.thing()
+
+do.the.thing(papers$`_themes`, minimum.frequency = 3) # not sure what min frequency--probably 3
+do.the.thing(papers$`_materials`, minimum.frequency = 2) # min frequency of 3
+do.the.thing(papers$`_methods`, minimum.frequency = 2) # need min frequency of 2
+do.the.thing(papers$`_Title`, minimum.frequency = 4) # why doesn't this display AI???
+
+```
+
+
+
+
+## Reproducibility
+
+Repository: https://github.com/KevinBretonnelCohen/NLPReproducibilityChecklist
+
+```{r reproducibility, echo =FALSE}
+
+papers <- tidyr::as_tibble(papers)
+knitr::kable(papers)
+
+sessionInfo()
+```
+
